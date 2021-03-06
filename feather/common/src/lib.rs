@@ -43,6 +43,7 @@ pub fn register(game: &mut Game, systems: &mut SystemExecutor<Game>) {
     chunk_loading::register(game, systems);
     chunk_entities::register(systems);
     interactable::register(game);
+    physics::register(systems);
 
     game.add_entity_spawn_callback(entities::add_entity_components);
 }

@@ -8,9 +8,12 @@ use ecs::EntityBuilder;
 use quill_common::{components::OnGround, entity_init::EntityInit};
 use uuid::Uuid;
 
+use crate::physics::Physics;
+
 /// Adds default components shared between all entities.
 fn build_default(builder: &mut EntityBuilder) {
     builder.add(Uuid::new_v4()).add(OnGround(true));
+    builder.add(Physics::default());
 }
 
 pub mod area_effect_cloud;

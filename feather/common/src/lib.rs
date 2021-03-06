@@ -35,6 +35,8 @@ pub mod entities;
 
 pub mod interactable;
 
+pub mod physics;
+
 /// Registers gameplay systems with the given `Game` and `SystemExecutor`.
 pub fn register(game: &mut Game, systems: &mut SystemExecutor<Game>) {
     view::register(game, systems);

@@ -34,7 +34,6 @@ pub use chat::ChatBox;
 pub mod entities;
 
 pub mod interactable;
-
 pub mod physics;
 
 /// Registers gameplay systems with the given `Game` and `SystemExecutor`.

@@ -4,7 +4,7 @@ use quill_common::{Component, Pointer, PointerMut};
 
 /// Unique internal ID of an entity.
 ///
-/// Can be passed to [`Game::entity`] to get an [`Entity`]
+/// Can be passed to [`crate::Game::entity`] to get an [`Entity`]
 /// handle.
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
 #[repr(transparent)]
@@ -21,7 +21,7 @@ pub struct MissingComponent(&'static str);
 /// Allows access to the entity's components, like
 /// position and UUID.
 ///
-/// Use [`Game::entity`] to get an `Entity` instance.
+/// Use [`crate::Game::entity`] to get an `Entity` instance.
 ///
 /// An `Entity` be sent or shared between threads. However,
 /// an [`EntityId`] can.
@@ -97,6 +97,24 @@ impl Entity {
         unsafe {
             quill_sys::entity_send_message(self.id.0, message.as_ptr().into(), message.len() as u32)
         }
+    }
+
+    /// Sends the given title to this entity.
+    pub fn send_title(&self, title: &libcraft_text::Title) {
+        let title = bincode::serialize(title).expect("failed to serialize Title");
+        unsafe {
+            quill_sys::entity_send_title(self.id.0, title.as_ptr().into(), title.len() as u32);
+        }
+    }
+
+    /// Hides the currently visible title for this entity, will do nothing if the there's no title
+    pub fn hide_title(&self) {
+        self.send_title(&libcraft_text::title::Title::HIDE);
+    }
+
+    /// Resets the currently visible title for this entity, will do nothing if there's no title
+    pub fn reset_title(&self) {
+        self.send_title(&libcraft_text::title::Title::RESET)
     }
 
     /// Gets the unique ID of this entity.

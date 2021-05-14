@@ -1,6 +1,6 @@
 use std::{cell::RefCell, mem, rc::Rc, sync::Arc};
 
-use base::{BlockId, BlockPosition, ChunkPosition, Position, Text};
+use base::{BlockId, BlockPosition, ChunkPosition, Position, Text, Title};
 use ecs::{
     Ecs, Entity, EntityBuilder, HasEcs, HasResources, NoSuchEntity, Resources, SysResult,
     SystemExecutor,
@@ -19,7 +19,7 @@ type EntitySpawnCallback = Box<dyn FnMut(&mut EntityBuilder, &EntityInit)>;
 /// Stores the entire state of a Minecraft game.
 ///
 /// This contains:
-/// * A [`World`](base::World) containing chunks and blocks.
+/// * A [`World`](crate::World) containing chunks and blocks.
 /// * An [`Ecs`](ecs::Ecs) containing entities.
 /// * A [`Resources`](ecs::Resources) containing additional, user-defined data.
 /// * A [`SystemExecutor`] to run systems.
@@ -170,6 +170,13 @@ impl Game {
     pub fn send_message(&mut self, entity: Entity, message: ChatMessage) -> SysResult {
         let mut mailbox = self.ecs.get_mut::<ChatBox>(entity)?;
         mailbox.send(message);
+        Ok(())
+    }
+
+    /// Utility method to send a title to an entity.
+    pub fn send_title(&mut self, entity: Entity, title: Title) -> SysResult {
+        let mut mailbox = self.ecs.get_mut::<ChatBox>(entity)?;
+        mailbox.send_title(title);
         Ok(())
     }
 

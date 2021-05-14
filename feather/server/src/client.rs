@@ -7,8 +7,8 @@ use std::{
 
 use ahash::AHashSet;
 use base::{
-    BlockId, BlockPosition, Chunk, ChunkPosition, EntityKind, Gamemode, ItemStack, Position,
-    ProfileProperty, Text,
+    BlockId, BlockPosition, Chunk, ChunkPosition, EntityKind, EntityMetadata, Gamemode, ItemStack,
+    Position, ProfileProperty, Text,
 };
 use common::{
     chat::{ChatKind, ChatMessage},
@@ -23,8 +23,8 @@ use protocol::{
         server::{
             AddPlayer, Animation, BlockChange, ChatPosition, ChunkData, ChunkDataKind,
             DestroyEntities, Disconnect, EntityAnimation, EntityHeadLook, EntityTeleport, JoinGame,
-            KeepAlive, PlayerInfo, PlayerPositionAndLook, PluginMessage, SpawnPlayer, UnloadChunk,
-            UpdateViewPosition, WindowItems,
+            KeepAlive, PlayerInfo, PlayerPositionAndLook, PluginMessage, SendEntityMetadata,
+            SpawnPlayer, Title, UnloadChunk, UpdateViewPosition, WindowItems,
         },
     },
     ClientPlayPacket, Nbt, ProtocolVersion, ServerPlayPacket, Writeable,
@@ -214,7 +214,8 @@ impl Client {
         let mut data = Vec::new();
         "Feather"
             .to_owned()
-            .write(&mut data, ProtocolVersion::V1_16_2);
+            .write(&mut data, ProtocolVersion::V1_16_2)
+            .unwrap();
         self.send_plugin_message("minecraft:brand", data)
     }
 
@@ -419,6 +420,52 @@ impl Client {
         self.send_packet(packet);
     }
 
+    /// Sends all the required packets to display the [`Title`]
+    ///
+    /// If both the `title` and the `sub_title` are set to `None`
+    /// This will emit the [`Title::Hide`] packet.
+    ///
+    /// If the sum of `fade_in`, `stay` and `fade_out` is `0`
+    /// This will emit the [`Title::Reset`] packet.
+    pub fn send_title(&self, title: base::Title) {
+        if title.title.is_none() && title.sub_title.is_none() {
+            self.send_packet(Title::Hide);
+        } else if title.fade_in + title.stay + title.fade_out == 0 {
+            self.send_packet(Title::Reset);
+        } else {
+            if let Some(main_title) = title.title {
+                self.send_packet(Title::SetTitle { text: main_title });
+            }
+
+            if let Some(sub_title) = title.sub_title {
+                self.send_packet(Title::SetSubtitle { text: sub_title })
+            }
+
+            self.send_packet(Title::SetTimesAndDisplay {
+                fade_in: title.fade_in as i32,
+                stay: title.stay as i32,
+                fade_out: title.fade_out as i32,
+            });
+        }
+    }
+
+    /// Resets the title for the player, this removes
+    /// the text from the screen.
+    ///
+    /// Not to be confused with [`Self::hide_title()`]
+    pub fn reset_title(&self) {
+        self.send_packet(Title::Reset);
+    }
+
+    /// Hides the title for the player, this removes
+    /// the text from the screen, but it will re-appear again
+    /// if the set times packet is sent again.
+    ///
+    /// Not to be confused with [`Self::reset_title()`]
+    pub fn hide_title(&self) {
+        self.send_packet(Title::Hide);
+    }
+
     pub fn confirm_window_action(&self, window_id: u8, action_number: i16, is_accepted: bool) {
         self.send_packet(WindowConfirmation {
             window_id,
@@ -463,6 +510,15 @@ impl Client {
     pub fn set_cursor_slot(&self, item: Option<ItemStack>) {
         log::trace!("Setting cursor slot of {} to {:?}", self.username, item);
         self.set_slot(-1, item);
+    }
+
+    pub fn send_player_model_flags(&self, netowrk_id: NetworkId, model_flags: u8) {
+        let mut entity_metadata = EntityMetadata::new();
+        entity_metadata.set(16, model_flags);
+        self.send_packet(SendEntityMetadata {
+            entity_id: netowrk_id.0,
+            entries: entity_metadata,
+        });
     }
 
     fn register_entity(&self, network_id: NetworkId) {

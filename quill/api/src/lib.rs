@@ -16,9 +16,10 @@ pub use setup::Setup;
 pub use libcraft_blocks::{BlockKind, BlockState};
 #[doc(inline)]
 pub use libcraft_core::{BlockPosition, ChunkPosition, Gamemode, Position};
-
 #[doc(inline)]
 pub use libcraft_particles::{Particle, ParticleKind};
+#[doc(inline)]
+pub use libcraft_text::*;
 
 #[doc(inline)]
 pub use quill_common::{components, entity_init::EntityInit, events, Component};
@@ -48,7 +49,7 @@ pub trait Plugin: Sized {
     /// Invoked before the plugin is disabled.
     ///
     /// # Warning
-    /// Like [`enable`], this method is not necessarily called
+    /// Like [`Plugin::enable`], this method is not necessarily called
     /// when the server shuts down. Users may choose to disable
     /// plugins at another time. Therefore, do not assume that
     /// the server is shutting down when this method is called.

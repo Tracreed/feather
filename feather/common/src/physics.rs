@@ -33,7 +33,7 @@ pub struct Physics {
 impl Default for Physics {
     fn default() -> Physics {
         Physics {
-            gravity: 9.81,
+            gravity: 0.08,
             drag: 0.02,
             bounding_box: BB {
                 height: 1,
@@ -59,16 +59,35 @@ pub fn physics_system(game: &mut Game) -> SysResult {
             yaw:pos.yaw
         };
 
+
         //apply gravity to vel
-        if game.block(new_pos.block())
-            .unwrap()                        
-            .is_solid()
-        {
-            vel.y = 0.0; 
-            new_pos.y = new_pos.block().y as f64 + 1.0;
-        }else{
-            vel.y -= 0.08;
-            //new_pos.y += vel.y;
+        //if game.block(new_pos.block())
+        //    .unwrap()                        
+        //    .is_solid()
+        //{
+        //    if vel.y < 0.00 {
+        //        new_pos.y = new_pos.block().y as f64 + 1.0;
+        //        vel.y = 0.00; 
+        //    }else {
+        //        new_pos.y = new_pos.block().y as f64 + 2.0;
+        //    }
+
+        //}else{
+        //    vel.y -= phys.gravity;
+        //}
+
+        match game.block(new_pos.block()){
+            Some(block) => {
+                if block.is_solid() && vel.y < 0.0{
+                    new_pos.y = new_pos.block().y as f64 + 1.0;
+                    vel.y = 0.00; 
+                }else{
+                    vel.y -= phys.gravity;
+                }
+            },
+            None => {
+                vel.y -= phys.gravity;
+            }
         }
 
 

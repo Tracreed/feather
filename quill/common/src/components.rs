@@ -98,3 +98,14 @@ impl Display for CustomName {
         self.0.fmt(f)
     }
 }
+
+/// Whether an entity is flying (like in creative mode, so it does not reflect if the player is flying by other means)
+#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub struct CreativeFlying(pub bool);
+
+bincode_component_impl!(CreativeFlying);
+
+/// Wheather an entity is sneaking, like in pressing shift.
+#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub struct Sneaking(pub bool);
+bincode_component_impl!(Sneaking);

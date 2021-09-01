@@ -24,6 +24,7 @@ members = [
     "quill/example-plugins/particle-example",
     "quill/example-plugins/plugin-message",
     "quill/example-plugins/query-entities",
+    "quill/example-plugins/physics-testing",
     "quill/example-plugins/simple",
     "quill/example-plugins/observe-creativemode-flight-event",
 

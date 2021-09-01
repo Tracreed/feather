@@ -1919,6 +1919,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "physics-testing"
+version = "0.1.0"
+dependencies = [
+ "quill",
+ "rand 0.8.3",
+]
+
+[[package]]
 name = "pin-project"
 version = "1.0.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"

@@ -10,6 +10,7 @@ mod gamerules;
 mod interaction;
 mod player;
 mod positions;
+pub mod velocity;
 
 pub use biome::Biome;
 pub use consts::*;
@@ -23,3 +24,5 @@ pub use positions::{
     vec3, Aabb, BlockFace, BlockPosition, ChunkPosition, Mat4f, Position, Vec2d, Vec2f, Vec2i,
     Vec3d, Vec3f, Vec3i, Vec4d, Vec4f, Vec4i,
 };
+
+pub use velocity::Velocity;

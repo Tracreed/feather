@@ -2,7 +2,7 @@
 
 use std::{any::TypeId, borrow::Cow as CloneOnWrite};
 
-use libcraft_core::{Gamemode, Position};
+use libcraft_core::{Gamemode, Position, Velocity};
 use libcraft_particles::Particle;
 use uuid::Uuid;
 
@@ -63,6 +63,7 @@ host_component_enum! {
     pub enum HostComponent {
         // `Pod` components
         Position = 0,
+        Velocity = 1,
 
         // Entity marker components
         AreaEffectCloud = 100,
@@ -308,6 +309,7 @@ macro_rules! pod_component_impl {
 }
 
 pod_component_impl!(Position);
+pod_component_impl!(Velocity);
 
 /**
 If you are using this macro and you get the error:

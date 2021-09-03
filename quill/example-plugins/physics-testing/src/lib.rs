@@ -25,17 +25,23 @@ fn physics_test_system(plugin: &mut PhysicsTesting, game: &mut Game) {
     let max_new_entites: u32 = 10;
     let mut spawned_entities: u32 = 0; 
 
-    for(entity, (pos, vel)) in game.query::<(&Position, &Velocity)>() {
-        entity.send_message(format!("[Physiscs Testing] Your position is {:?} and your velocity is {:?}", pos, vel));
+    for(_entity, (pos, _vel)) in game.query::<(&Position, &Velocity)>() {
+        //entity.send_message(format!("[Physiscs Testing] Your position is {:?} and your velocity is {:?}", pos, vel));
         if plugin.tick_counter % 100 == 0 && spawned_entities != max_new_entites  {
-            let rand_x = rand::thread_rng().gen_range(0.0..1.0);
-            let rand_z = rand::thread_rng().gen_range(0.0..1.0);
 
-            entity.send_message(format!("[Physiscs Testing] Spawning a mob on you"));
-            game.create_entity_builder(pos, random_mob())
-                .with(CustomName::new("name"))
-                .with(Velocity{x:rand_x, y:0.0, z:rand_z})
-                .finish();
+            //entity.send_message(format!("[Physiscs Testing] Spawning a mob on you"));
+            if plugin.tick_counter % 2 == 0{
+                game.create_entity_builder(pos, random_mob())
+                    .with(CustomName::new("name"))
+                    .with(Velocity{x:0.5, y:0.0, z:0.0})
+                    .finish();
+            }else{
+                game.create_entity_builder(pos, random_mob())
+                    .with(CustomName::new("name"))
+                    .with(Velocity{x:0.0, y:0.0, z:0.5})
+                    .finish();
+            }
+            
             spawned_entities += 1;
         }
     }

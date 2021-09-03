@@ -1,5 +1,5 @@
-use crate::Game;
-use libcraft_core::{Velocity,Position};
+use crate::{Game, World};
+use libcraft_core::{BlockPosition, Velocity,Position};
 use ecs::{SysResult, SystemExecutor};
 
 struct BB {
@@ -30,6 +30,53 @@ impl Default for Physics {
 }
 
 
+pub fn check_collision(world : &World, old_pos: &mut Position, new_pos: Position) -> Option<bool> {
+
+    let old_block_position = BlockPosition{
+        x: old_pos.x as i32,
+        y: old_pos.y as i32, 
+        z: old_pos.z as i32
+    };
+
+    let new_block_position = BlockPosition{
+        x: new_pos.x as i32,
+        y: new_pos.y as i32, 
+        z: new_pos.z as i32
+    };
+
+    // x-axis only
+    for x in old_block_position.x..new_block_position.x {
+        let check_block_position = BlockPosition{x, y:old_block_position.y, z:old_block_position.z};
+
+        match world.block_at(check_block_position) {
+            Some(block) =>{
+                if block.is_solid(){
+                    return Some(false)
+                }
+            },
+            None=>{},
+        }
+    }
+
+    // z-axis only
+    for z in old_block_position.z..new_block_position.z {
+        let check_block_position = BlockPosition{x:old_block_position.x, y:old_block_position.y, z};
+
+        match world.block_at(check_block_position) {
+            Some(block) =>{
+                if block.is_solid(){
+                    return Some(false)
+                }
+            },
+            None=>{},
+        }
+    }
+
+    // movement is valid
+    Some(true)
+}
+
+
 pub fn physics_system(game: &mut Game) -> SysResult {
     for (_entity, (pos, vel)) in game
         .ecs
@@ -44,13 +91,21 @@ pub fn physics_system(game: &mut Game) -> SysResult {
             yaw:pos.yaw
         };
 
-        *pos = new_pos;
 
-        // set future position
-        // pos.x = new_pos.x;
-        // pos.y = new_pos.y;
-        // pos.z = new_pos.z;
-
+        match check_collision(&game.world, pos, new_pos){
+            Some(valid) =>{
+                if valid {
+                    // set future position
+                    pos.x = new_pos.x;
+                    pos.y = new_pos.y;
+                    pos.z = new_pos.z;
+                }else{
+                    // don't update position
+                    return Ok(())
+                }
+            },
+            None => return Ok(())
+        }
     }
 
     Ok(())

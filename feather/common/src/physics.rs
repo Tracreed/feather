@@ -1,5 +1,5 @@
 use crate::Game;
-use base::{BlockPosition, Position};
+use libcraft_core::{Velocity,Position};
 use ecs::{SysResult, SystemExecutor};
 
 struct BB {
@@ -7,21 +7,6 @@ struct BB {
     width: u32,
 }
 
-pub struct Velocity {
-    x: f64,
-    y: f64,
-    z: f64,
-}
-
-impl Default for Velocity{
-    fn default() -> Velocity{
-        Velocity{
-            x: 0.0,
-            y: 0.0,
-            z: 0.0,
-        }
-    }
-}
 
 pub struct Physics {
     gravity: f64,
@@ -46,12 +31,12 @@ impl Default for Physics {
 
 
 pub fn physics_system(game: &mut Game) -> SysResult {
-    for (_entity, (phys, mut pos, mut vel)) in game
+    for (_entity, (pos, vel)) in game
         .ecs
-        .query::<(&mut Physics, &mut Position, &mut Velocity)>()
+        .query::<(&mut Position, &mut Velocity)>()
         .iter()
     {
-        let mut new_pos: Position = Position{
+        let new_pos: Position = Position{
             x: pos.x+vel.x, 
             y: pos.y+vel.y, 
             z: pos.z+vel.z, 
@@ -59,42 +44,12 @@ pub fn physics_system(game: &mut Game) -> SysResult {
             yaw:pos.yaw
         };
 
-
-        //apply gravity to vel
-        //if game.block(new_pos.block())
-        //    .unwrap()                        
-        //    .is_solid()
-        //{
-        //    if vel.y < 0.00 {
-        //        new_pos.y = new_pos.block().y as f64 + 1.0;
-        //        vel.y = 0.00; 
-        //    }else {
-        //        new_pos.y = new_pos.block().y as f64 + 2.0;
-        //    }
-
-        //}else{
-        //    vel.y -= phys.gravity;
-        //}
-
-        match game.block(new_pos.block()){
-            Some(block) => {
-                if block.is_solid() && vel.y < 0.0{
-                    new_pos.y = new_pos.block().y as f64 + 1.0;
-                    vel.y = 0.00; 
-                }else{
-                    vel.y -= phys.gravity;
-                }
-            },
-            None => {
-                vel.y -= phys.gravity;
-            }
-        }
-
+        *pos = new_pos;
 
         // set future position
-        pos.x = new_pos.x;
-        pos.y = new_pos.y;
-        pos.z = new_pos.z;
+        // pos.x = new_pos.x;
+        // pos.y = new_pos.y;
+        // pos.z = new_pos.z;
 
     }
 
@@ -105,4 +60,5 @@ pub fn physics_system(game: &mut Game) -> SysResult {
 pub fn register(systems: &mut SystemExecutor<Game>) {
     systems.add_system(physics_system);
 }
+
 

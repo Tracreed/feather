@@ -1,13 +1,16 @@
 use crate::{ClientId, NetworkId, Server};
+use base::{Position};
 use common::entities::player::HotbarSlot;
 use common::interactable::InteractableRegistry;
 use common::Game;
 use ecs::{Entity, EntityRef, SysResult};
 use libcraft_core::{BlockFace as LibcraftBlockFace, Hand};
 use libcraft_core::{InteractionType, Vec3f};
+use nbt::Blob;
+use protocol::Nbt;
 use protocol::packets::client::{
     BlockFace, HeldItemChange, InteractEntity, InteractEntityKind, PlayerBlockPlacement,
-    PlayerDigging, PlayerDiggingStatus,
+    PlayerDigging, PlayerDiggingStatus, QueryBlockNbt,
 };
 use quill_common::{
     events::{BlockInteractEvent, BlockPlacementEvent, InteractEntityEvent},
@@ -119,6 +122,49 @@ pub fn handle_player_digging(game: &mut Game, packet: PlayerDigging, _player: En
         }
         _ => Ok(()),
     }
+}
+
+/// Handles Block NBT queries.
+/// Todo! Add block NBT to blocks.
+pub fn handle_player_query_block_nbt(game: &mut Game, packet: QueryBlockNbt, player_id: Entity, _server: &mut Server) -> SysResult {
+    let player = game.ecs.entity(player_id).unwrap();
+
+    let position = *player.get::<Position>()?;
+
+    let x_diff = (position.x as i32 - packet.position.x).abs();
+    let y_diff = (position.y as i32 - packet.position.y).abs();
+
+    if x_diff > 5 || y_diff > 5 {
+        return Ok(())
+    }
+
+    let block = {
+        let result = game.block(packet.position);
+        match result {
+            Some(block) => block,
+            None => {
+                let client_id = game.ecs.get::<ClientId>(player_id).unwrap();
+
+                let client = _server.clients.get(*client_id).unwrap();
+
+                client.disconnect("Attempted to query an invalid block!");
+
+                anyhow::bail!(
+                    "Player attempted to query an invalid block. {:?}",
+                    packet
+                )
+            }
+        }
+    };
+    let mut nbt = Blob::new();
+
+
+    let client_id = game.ecs.get::<ClientId>(player_id).unwrap();
+
+    let client = _server.clients.get(*client_id).unwrap();
+
+    client.send_nbt_query_response(packet.transaction_id, Nbt(nbt));
+    Ok(())
 }
 
 pub fn handle_interact_entity(

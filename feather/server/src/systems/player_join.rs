@@ -54,8 +54,10 @@ fn accept_new_player(game: &mut Game, server: &mut Server, client_id: ClientId) 
         .add(window)
         .add(HotbarSlot::default());
 
-    game.spawn_entity(builder);
+    let player_entity = game.spawn_entity(builder);
 
+    client.send_entity_status(player_entity.id() - 1, 28);
+    
     broadcast_player_join(game, client.username());
 
     Ok(())

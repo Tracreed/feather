@@ -3,7 +3,7 @@ use common::{chat::ChatKind, Game};
 use ecs::{Entity, EntityRef, SysResult};
 use interaction::{
     handle_held_item_change, handle_interact_entity, handle_player_block_placement,
-    handle_player_digging,
+    handle_player_digging, handle_player_query_block_nbt,
 };
 use protocol::{
     packets::{
@@ -75,8 +75,11 @@ pub fn handle_packet(
             entity_action::handle_entity_action(game, player_id, packet)
         }
 
+        ClientPlayPacket::QueryBlockNbt(packet) => {
+            handle_player_query_block_nbt(game, packet, player_id, server)
+        }
+
         ClientPlayPacket::TeleportConfirm(_)
-        | ClientPlayPacket::QueryBlockNbt(_)
         | ClientPlayPacket::SetDifficulty(_)
         | ClientPlayPacket::ClientStatus(_)
         | ClientPlayPacket::TabComplete(_)

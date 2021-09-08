@@ -303,7 +303,7 @@ packets! {
     }
 
     EntityStatus {
-        entity_id i32;
+        entity_id u32;
         status i8;
     }
 
@@ -870,7 +870,7 @@ def_enum! {
             old_diameter f64;
             new_diameter f64;
             speed u64;
-            portal_teeport_boundary VarInt;
+            portal_teleport_boundary VarInt;
             warning_time VarInt;
             warning_blocks VarInt;
         },

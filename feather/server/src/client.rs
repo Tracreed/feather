@@ -15,6 +15,7 @@ use common::{
     Window,
 };
 use flume::{Receiver, Sender};
+use nbt::Blob;
 use packets::server::{Particle, SetSlot, SpawnLivingEntity, UpdateLight, WindowConfirmation};
 use protocol::{
     packets::{
@@ -23,7 +24,8 @@ use protocol::{
             AddPlayer, Animation, BlockChange, ChatPosition, ChunkData, ChunkDataKind,
             DestroyEntities, Disconnect, EntityAnimation, EntityHeadLook, EntityTeleport, JoinGame,
             KeepAlive, PlayerInfo, PlayerPositionAndLook, PluginMessage, SendEntityMetadata,
-            SpawnPlayer, Title, UnloadChunk, UpdateViewPosition, WindowItems,
+            SpawnPlayer, Title, UnloadChunk, UpdateViewPosition, WindowItems, EntityStatus,
+            NbtQueryResponse,
         },
     },
     ClientPlayPacket, Nbt, ProtocolVersion, ServerPlayPacket, Writeable,
@@ -532,6 +534,20 @@ impl Client {
         self.disconnected.set(true);
         self.send_packet(Disconnect {
             reason: Text::from(reason.to_owned()).to_string(),
+        });
+    }
+
+    pub fn send_entity_status(&self, entity_id: u32, status: i8) {
+        self.send_packet(EntityStatus {
+            entity_id,
+            status
+        });
+    }
+    
+    pub fn send_nbt_query_response(&self, transaction_id: i32, nbt: Nbt<Blob>) {
+        self.send_packet(NbtQueryResponse{
+            transaction_id,
+            nbt
         });
     }
 }

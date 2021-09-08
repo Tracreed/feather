@@ -138,7 +138,7 @@ pub fn handle_player_query_block_nbt(game: &mut Game, packet: QueryBlockNbt, pla
         return Ok(())
     }
 
-    let block = {
+    let _block = {
         let result = game.block(packet.position);
         match result {
             Some(block) => block,
@@ -156,7 +156,7 @@ pub fn handle_player_query_block_nbt(game: &mut Game, packet: QueryBlockNbt, pla
             }
         }
     };
-    let mut nbt = Blob::new();
+    let nbt = Blob::new();
 
 
     let client_id = game.ecs.get::<ClientId>(player_id).unwrap();

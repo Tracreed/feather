@@ -119,3 +119,16 @@ impl Sprinting {
     }
 }
 bincode_component_impl!(Sprinting);
+
+#[derive(Copy, Clone, PartialEq, Serialize, Deserialize, Debug)]
+pub struct Health {
+    pub health: f32,
+    pub max_health: f32,
+}
+
+impl Health {
+    pub fn damage(&mut self, value: f32) {
+        self.health = self.health - value;
+    }
+}
+bincode_component_impl!(Health);

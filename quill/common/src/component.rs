@@ -190,7 +190,7 @@ host_component_enum! {
         SneakEvent = 1012,
         Sprinting = 1013,
         SprintEvent = 1014,
-
+        Health = 1015,
 
     }
 }

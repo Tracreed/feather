@@ -16,19 +16,8 @@ use common::{
 };
 use flume::{Receiver, Sender};
 use packets::server::{Particle, SetSlot, SpawnLivingEntity, UpdateLight, WindowConfirmation};
-use protocol::{
-    packets::{
-        self,
-        server::{
-            AddPlayer, Animation, BlockChange, ChatPosition, ChunkData, ChunkDataKind,
-            DestroyEntities, Disconnect, EntityAnimation, EntityHeadLook, EntityTeleport, JoinGame,
-            KeepAlive, PlayerInfo, PlayerPositionAndLook, PluginMessage, SendEntityMetadata,
-            SpawnPlayer, Title, UnloadChunk, UpdateViewPosition, WindowItems,
-        },
-    },
-    ClientPlayPacket, Nbt, ProtocolVersion, ServerPlayPacket, Writeable,
-};
-use quill_common::components::OnGround;
+use protocol::{ClientPlayPacket, Nbt, ProtocolVersion, ServerPlayPacket, Writeable, packets::{self, server::{AddPlayer, Animation, BlockChange, ChatPosition, ChunkData, ChunkDataKind, DestroyEntities, Disconnect, EntityAnimation, EntityHeadLook, EntityStatus, EntityTeleport, JoinGame, KeepAlive, PlayerInfo, PlayerPositionAndLook, PluginMessage, SendEntityMetadata, SpawnPlayer, Title, UnloadChunk, UpdateHealth, UpdateViewPosition, WindowItems}}};
+use quill_common::components::{OnGround};
 use uuid::Uuid;
 use vec_arena::Arena;
 
@@ -511,11 +500,11 @@ impl Client {
         self.set_slot(-1, item);
     }
 
-    pub fn send_player_model_flags(&self, netowrk_id: NetworkId, model_flags: u8) {
+    pub fn send_player_model_flags(&self, network_id: NetworkId, model_flags: u8) {
         let mut entity_metadata = EntityMetadata::new();
         entity_metadata.set(16, model_flags);
         self.send_packet(SendEntityMetadata {
-            entity_id: netowrk_id.0,
+            entity_id: network_id.0,
             entries: entity_metadata,
         });
     }
@@ -532,6 +521,22 @@ impl Client {
         self.disconnected.set(true);
         self.send_packet(Disconnect {
             reason: Text::from(reason.to_owned()).to_string(),
+        });
+    }
+
+    pub fn update_health(&self, health: f32, food: i32, food_saturation: f32) {
+        log::trace!("Sending Update Health Packet!");
+        self.send_packet(UpdateHealth{
+            health,
+            food,
+            food_saturation
+        });
+    }
+
+    pub fn send_entity_status(&self, entity: i32, status: i8) {
+        self.send_packet(EntityStatus{
+            entity_id: entity,
+            status,
         });
     }
 }

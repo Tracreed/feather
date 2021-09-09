@@ -2,17 +2,19 @@
 //! Spawn packets, position updates, equipment, animations, etc.
 
 use base::Position;
-use common::Game;
-use ecs::{SysResult, SystemExecutor};
-use quill_common::components::OnGround;
+use common::{Game, events::EntityDamageEvent};
+use ecs::{Entity, SysResult, SystemExecutor};
+use quill_common::components::{Health, OnGround};
 
-use crate::{entities::PreviousPosition, NetworkId, Server};
+use crate::{ClientId, NetworkId, Server, entities::PreviousPosition};
 
 mod spawn_packet;
 
 pub fn register(game: &mut Game, systems: &mut SystemExecutor<Game>) {
     spawn_packet::register(game, systems);
-    systems.group::<Server>().add_system(send_entity_movement);
+    systems.group::<Server>()
+        .add_system(send_entity_movement)
+        .add_system(send_entity_damage);
 }
 
 /// Sends entity movement packets.
@@ -27,6 +29,21 @@ fn send_entity_movement(game: &mut Game, server: &mut Server) -> SysResult {
                 client.update_entity_position(network_id, position, on_ground);
             });
             prev_position.0 = position;
+        }
+    }
+    Ok(())
+}
+
+fn send_entity_damage(game: &mut Game, server: &mut Server) -> SysResult {
+    for (entity, (damage, health, client_id)) in game.ecs.query::<(&EntityDamageEvent, &mut Health, &ClientId)>().iter() {
+        health.damage(damage.damage);
+        let client = server.clients.get(*client_id).unwrap();
+        if health.0 > 0.0 {
+            client.update_health( health.0, 15, 5.0);
+            client.send_entity_status(entity.id() as i32 - 1, 2);
+        } else {
+            client.update_health( health.0, 15, 5.0);
+            client.send_entity_status(entity.id() as i32 -1, 3);
         }
     }
     Ok(())

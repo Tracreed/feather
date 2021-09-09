@@ -73,3 +73,8 @@ pub struct EntityRemoveEvent;
 /// Triggered when an entity is added into the world.
 #[derive(Debug)]
 pub struct EntityCreateEvent;
+
+#[derive(Debug)]
+pub struct EntityDamageEvent{
+    pub damage: f32
+}

@@ -1,5 +1,5 @@
 use base::{Position, Text};
-use common::{chat::ChatKind, Game};
+use common::{Game, chat::ChatKind, events::EntityDamageEvent};
 use ecs::{Entity, EntityRef, SysResult};
 use interaction::{
     handle_held_item_change, handle_interact_entity, handle_player_block_placement,
@@ -12,7 +12,7 @@ use protocol::{
     },
     ClientPlayPacket,
 };
-use quill_common::components::Name;
+use quill_common::components::{Health, Name};
 
 use crate::{NetworkId, Server};
 
@@ -45,7 +45,7 @@ pub fn handle_packet(
 
         ClientPlayPacket::Animation(packet) => handle_animation(server, player, packet),
 
-        ClientPlayPacket::ChatMessage(packet) => handle_chat_message(game, player, packet),
+        ClientPlayPacket::ChatMessage(packet) => handle_chat_message(game, player_id),
 
         ClientPlayPacket::PlayerDigging(packet) => handle_player_digging(game, packet, player_id),
 
@@ -130,10 +130,14 @@ fn handle_animation(
     Ok(())
 }
 
-fn handle_chat_message(game: &Game, player: EntityRef, packet: client::ChatMessage) -> SysResult {
-    let name = player.get::<Name>()?;
+fn handle_chat_message(game: &mut Game, player_id: Entity) -> SysResult {
+    /*let name = player.get::<Name>()?;
     let message = Text::translate_with("chat.type.text", vec![name.to_string(), packet.message]);
-    game.broadcast_chat(ChatKind::PlayerChat, message);
+    game.broadcast_chat(ChatKind::PlayerChat, message);*/
+    println!("Id: {:?}", player_id.id());
+    game.ecs.insert_entity_event(player_id, EntityDamageEvent{damage:1.0})?;
+    //let player_ent = game.ecs.entity(player_id)?;
+    //player_ent.get::<&Health>();
     Ok(())
 }
 

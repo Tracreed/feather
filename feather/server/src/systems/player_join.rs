@@ -54,7 +54,7 @@ fn accept_new_player(game: &mut Game, server: &mut Server, client_id: ClientId) 
         .add(inventory)
         .add(window)
         .add(HotbarSlot::default())
-        .add(Health(10.0));
+        .add(Health { health: 10.0, max_health: 20.0 });
 
     game.spawn_entity(builder);
 

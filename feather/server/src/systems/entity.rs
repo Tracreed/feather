@@ -35,15 +35,15 @@ fn send_entity_movement(game: &mut Game, server: &mut Server) -> SysResult {
 }
 
 fn send_entity_damage(game: &mut Game, server: &mut Server) -> SysResult {
-    for (entity, (damage, health, client_id)) in game.ecs.query::<(&EntityDamageEvent, &mut Health, &ClientId)>().iter() {
+    for (entity, (damage, health, client_id, network_id)) in game.ecs.query::<(&EntityDamageEvent, &mut Health, &ClientId, &NetworkId)>().iter() {
         health.damage(damage.damage);
         let client = server.clients.get(*client_id).unwrap();
-        if health.0 > 0.0 {
-            client.update_health( health.0, 15, 5.0);
-            client.send_entity_status(entity.id() as i32 - 1, 2);
+        if health.health > 0.0 {
+            client.update_health( health.health, 15, 5.0);
+            client.send_entity_status(network_id.0, 2);
         } else {
-            client.update_health( health.0, 15, 5.0);
-            client.send_entity_status(entity.id() as i32 -1, 3);
+            client.update_health( health.health, 15, 5.0);
+            client.send_entity_status(network_id.0, 3);
         }
     }
     Ok(())

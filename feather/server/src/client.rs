@@ -16,7 +16,7 @@ use common::{
 };
 use flume::{Receiver, Sender};
 use packets::server::{Particle, SetSlot, SpawnLivingEntity, UpdateLight, WindowConfirmation};
-use protocol::{ClientPlayPacket, Nbt, ProtocolVersion, ServerPlayPacket, Writeable, packets::{self, server::{AddPlayer, Animation, BlockChange, ChatPosition, ChunkData, ChunkDataKind, DestroyEntities, Disconnect, EntityAnimation, EntityHeadLook, EntityStatus, EntityTeleport, JoinGame, KeepAlive, PlayerInfo, PlayerPositionAndLook, PluginMessage, SendEntityMetadata, SpawnPlayer, Title, UnloadChunk, UpdateHealth, UpdateViewPosition, WindowItems}}};
+use protocol::{ClientPlayPacket, Nbt, ProtocolVersion, ServerPlayPacket, Writeable, packets::{self, server::{AddPlayer, Animation, BlockChange, ChangeGameState, ChatPosition, ChunkData, ChunkDataKind, DestroyEntities, Disconnect, EntityAnimation, EntityHeadLook, EntityStatus, EntityTeleport, JoinGame, KeepAlive, PlayerInfo, PlayerPositionAndLook, PluginMessage, Respawn, SendEntityMetadata, SpawnPlayer, StateReason, Title, UnloadChunk, UpdateHealth, UpdateViewPosition, WindowItems}}};
 use quill_common::components::{OnGround};
 use uuid::Uuid;
 use vec_arena::Arena;
@@ -539,6 +539,32 @@ impl Client {
             status,
         });
     }
+
+    pub fn change_game_state(&self, reason: StateReason, value: f32) {
+        self.send_packet(ChangeGameState{
+            reason,
+            value,
+        });
+    }
+
+    pub fn send_respawn(&self, gamemode: Gamemode) {
+        let dimension = nbt::Blob::from_reader(&mut Cursor::new(include_bytes!(
+            "../../../assets/dimension.nbt"
+        )))
+        .expect("dimension asset is malformed");
+
+        self.send_packet(Respawn{
+            dimension: Nbt(dimension),
+            world_name: "world".to_owned(),
+            hashed_seed: 0,
+            gamemode,
+            previous_gamemode: Gamemode::Respawning,
+            is_debug: false,
+            is_flat: false,
+            copy_metadata: false,
+        })
+    }
+    
 }
 
 fn chat_packet(message: ChatMessage) -> packets::server::ChatMessage {

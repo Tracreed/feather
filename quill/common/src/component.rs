@@ -191,6 +191,7 @@ host_component_enum! {
         Sprinting = 1013,
         SprintEvent = 1014,
         Health = 1015,
+        AwaitingRespawn = 1016,
 
     }
 }

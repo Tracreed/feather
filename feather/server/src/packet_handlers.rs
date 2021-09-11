@@ -12,7 +12,7 @@ use protocol::{
     },
     ClientPlayPacket,
 };
-use quill_common::components::{Health, Name};
+
 
 use crate::{NetworkId, Server};
 
@@ -20,6 +20,7 @@ mod entity_action;
 mod interaction;
 pub mod inventory;
 mod movement;
+mod client_status;
 
 /// Handles a packet received from a client.
 pub fn handle_packet(
@@ -75,10 +76,13 @@ pub fn handle_packet(
             entity_action::handle_entity_action(game, player_id, packet)
         }
 
+        ClientPlayPacket::ClientStatus(packet) => {
+            client_status::handle_client_status(game, player, server, packet)
+        }
+
         ClientPlayPacket::TeleportConfirm(_)
         | ClientPlayPacket::QueryBlockNbt(_)
         | ClientPlayPacket::SetDifficulty(_)
-        | ClientPlayPacket::ClientStatus(_)
         | ClientPlayPacket::TabComplete(_)
         | ClientPlayPacket::WindowConfirmation(_)
         | ClientPlayPacket::ClickWindowButton(_)
@@ -134,8 +138,9 @@ fn handle_chat_message(game: &mut Game, player_id: Entity) -> SysResult {
     /*let name = player.get::<Name>()?;
     let message = Text::translate_with("chat.type.text", vec![name.to_string(), packet.message]);
     game.broadcast_chat(ChatKind::PlayerChat, message);*/
-    println!("Id: {:?}", player_id.id());
-    game.ecs.insert_entity_event(player_id, EntityDamageEvent{damage:1.0})?;
+    let player = game.ecs.entity(player_id)?;
+    let playerid = player.get::<NetworkId>()?.0;
+    game.ecs.insert_entity_event(player_id, EntityDamageEvent{damage:1.0, id: playerid})?;
     //let player_ent = game.ecs.entity(player_id)?;
     //player_ent.get::<&Health>();
     Ok(())

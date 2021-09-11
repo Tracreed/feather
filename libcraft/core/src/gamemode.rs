@@ -12,6 +12,7 @@ pub enum Gamemode {
     Creative = 1,
     Adventure = 2,
     Spectator = 3,
+    Respawning = 255,
 }
 
 impl Gamemode {
@@ -22,6 +23,7 @@ impl Gamemode {
             1 => Gamemode::Creative,
             2 => Gamemode::Adventure,
             3 => Gamemode::Spectator,
+            255 => Gamemode::Respawning,
             _ => return None,
         })
     }

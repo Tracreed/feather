@@ -132,3 +132,7 @@ impl Health {
     }
 }
 bincode_component_impl!(Health);
+
+#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub struct AwaitingRespawn(pub bool);
+bincode_component_impl!(AwaitingRespawn);

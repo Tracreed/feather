@@ -4,7 +4,7 @@
 use base::Position;
 use common::{Game, events::EntityDamageEvent};
 use ecs::{Entity, SysResult, SystemExecutor};
-use quill_common::components::{Health, OnGround};
+use quill_common::components::{AwaitingRespawn, Health, OnGround};
 
 use crate::{ClientId, NetworkId, Server, entities::PreviousPosition};
 
@@ -14,7 +14,7 @@ pub fn register(game: &mut Game, systems: &mut SystemExecutor<Game>) {
     spawn_packet::register(game, systems);
     systems.group::<Server>()
         .add_system(send_entity_movement)
-        .add_system(send_entity_damage);
+        .add_system(send_damage);
 }
 
 /// Sends entity movement packets.
@@ -34,16 +34,55 @@ fn send_entity_movement(game: &mut Game, server: &mut Server) -> SysResult {
     Ok(())
 }
 
-fn send_entity_damage(game: &mut Game, server: &mut Server) -> SysResult {
-    for (entity, (damage, health, client_id, network_id)) in game.ecs.query::<(&EntityDamageEvent, &mut Health, &ClientId, &NetworkId)>().iter() {
-        health.damage(damage.damage);
-        let client = server.clients.get(*client_id).unwrap();
-        if health.health > 0.0 {
-            client.update_health( health.health, 15, 5.0);
-            client.send_entity_status(network_id.0, 2);
-        } else {
-            client.update_health( health.health, 15, 5.0);
-            client.send_entity_status(network_id.0, 3);
+fn send_entity_damage(game: &Game, server: &mut Server, damage: &EntityDamageEvent, entity: Entity) -> SysResult {
+    let entity_ref = game.ecs.entity(entity)?;
+    let mut health = entity_ref.get_mut::<Health>()?;
+    let position  = *entity_ref.get::<Position>()?;
+    health.damage(damage.damage);
+    if health.health > 0.0 {
+        server.broadcast_nearby_with(position, |client| {
+            client.send_entity_status(damage.id, 2);
+        });
+    } else {
+        server.broadcast_nearby_with(position, |client| {
+            client.send_entity_status(damage.id, 3);
+        });
+    }
+    Ok(())
+}
+
+fn send_player_damage(game: &Game, server: &mut Server, damage: &EntityDamageEvent, entity: Entity) -> SysResult {
+    let entity_ref = game.ecs.entity(entity)?;
+    let mut health = entity_ref.get_mut::<Health>()?;
+    let position = *entity_ref.get::<Position>()?;
+    let client_id = *entity_ref.get::<ClientId>()?;
+
+    health.damage(damage.damage);
+    let client = server.clients.get(client_id).unwrap();
+    if health.health > 0.0 {
+        client.update_health(health.health, 15, 5.0);
+        server.broadcast_nearby_with(position, |client| {
+            client.send_entity_status(damage.id, 2);
+        });
+    } else {
+        client.update_health(health.health, 15, 5.0);
+        println!("Is dead");
+        server.broadcast_nearby_with(position, |client| {
+            client.send_entity_status(damage.id, 3);
+        });
+        game.ecs.get_mut::<AwaitingRespawn>(entity)?.0 = true;
+    }
+    Ok(())
+}
+
+fn send_damage(game: &mut Game, server: &mut Server) -> SysResult {
+    for (entity, damage) in game.ecs.query::<&EntityDamageEvent>().iter() {
+        let entity_ref = game.ecs.entity(entity)?;
+        let entity_network_id = entity_ref.get::<ClientId>();
+        println!("Found ClientId");
+        match entity_network_id {
+            Ok(_) => return send_player_damage(game, server, damage, entity),
+            Err(_) => return send_entity_damage(game, server, damage, entity),
         }
     }
     Ok(())

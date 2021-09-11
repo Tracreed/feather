@@ -7,7 +7,7 @@ use common::{
     ChatBox, Game, Window,
 };
 use ecs::{SysResult, SystemExecutor};
-use quill_common::{components::{Health, Name}, entity_init::EntityInit};
+use quill_common::{components::{Health, AwaitingRespawn, Name}, entity_init::EntityInit};
 
 use crate::{ClientId, Server};
 
@@ -54,7 +54,8 @@ fn accept_new_player(game: &mut Game, server: &mut Server, client_id: ClientId) 
         .add(inventory)
         .add(window)
         .add(HotbarSlot::default())
-        .add(Health { health: 10.0, max_health: 20.0 });
+        .add(Health { health: 10.0, max_health: 20.0 })
+        .add(AwaitingRespawn(false));
 
     game.spawn_entity(builder);
 

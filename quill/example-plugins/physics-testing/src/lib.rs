@@ -26,10 +26,9 @@ fn physics_test_system(plugin: &mut PhysicsTesting, game: &mut Game) {
     let mut spawned_entities: u32 = 0; 
 
     for(_entity, (pos, _vel)) in game.query::<(&Position, &Velocity)>() {
-        //entity.send_message(format!("[Physiscs Testing] Your position is {:?} and your velocity is {:?}", pos, vel));
         if plugin.tick_counter % 100 == 0 && spawned_entities != max_new_entites  {
 
-            //entity.send_message(format!("[Physiscs Testing] Spawning a mob on you"));
+            // Every even tick spawns mob with positive x velocity
             if plugin.tick_counter % 2 == 0{
                 game.create_entity_builder(pos, random_mob())
                     .with(CustomName::new("name"))

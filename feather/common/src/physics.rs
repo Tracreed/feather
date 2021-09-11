@@ -15,6 +15,7 @@ pub struct Physics {
     dba: bool, // drag before acceleration
 }
 
+
 impl Default for Physics {
     fn default() -> Physics {
         Physics {
@@ -45,12 +46,12 @@ pub fn check_collision(world : &World, old_pos: &mut Position, new_pos: Position
     };
 
     // x-axis only
-    for x in old_block_position.x..new_block_position.x {
-        let check_block_position = BlockPosition{x, y:old_block_position.y, z:old_block_position.z};
+    for x in old_block_position.x..new_block_position.x+1 {
+        let check_block_position = BlockPosition{x, y:new_block_position.y, z:new_block_position.z};
 
         match world.block_at(check_block_position) {
             Some(block) =>{
-                if block.is_solid(){
+                if !block.is_air(){
                     return Some(false)
                 }
             },
@@ -59,12 +60,12 @@ pub fn check_collision(world : &World, old_pos: &mut Position, new_pos: Position
     }
 
     // z-axis only
-    for z in old_block_position.z..new_block_position.z {
-        let check_block_position = BlockPosition{x:old_block_position.x, y:old_block_position.y, z};
+    for z in old_block_position.z..new_block_position.z+1 {
+        let check_block_position = BlockPosition{x:new_block_position.x, y:new_block_position.y, z};
 
         match world.block_at(check_block_position) {
             Some(block) =>{
-                if block.is_solid(){
+                if !block.is_air(){
                     return Some(false)
                 }
             },
@@ -83,6 +84,7 @@ pub fn physics_system(game: &mut Game) -> SysResult {
         .query::<(&mut Position, &mut Velocity)>()
         .iter()
     {
+
         let new_pos: Position = Position{
             x: pos.x+vel.x, 
             y: pos.y+vel.y, 

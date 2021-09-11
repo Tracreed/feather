@@ -76,5 +76,6 @@ pub struct EntityCreateEvent;
 
 #[derive(Debug)]
 pub struct EntityDamageEvent{
-    pub damage: f32
+    pub damage: f32,
+    pub id: i32,
 }

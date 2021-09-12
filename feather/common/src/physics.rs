@@ -59,6 +59,23 @@ pub fn check_collision(world : &World, old_pos: &mut Position, new_pos: Position
         }
     }
 
+
+    // y-axis only
+    for y in old_block_position.y..new_block_position.y+1 {
+        let check_block_position = BlockPosition{x:new_block_position.x, y:y, z:new_block_position.z};
+
+        match world.block_at(check_block_position) {
+            Some(block) =>{
+                if !block.is_air(){
+                    return Some(false)
+                }
+            },
+            None=>{},
+        }
+    }
+
+
+
     // z-axis only
     for z in old_block_position.z..new_block_position.z+1 {
         let check_block_position = BlockPosition{x:new_block_position.x, y:new_block_position.y, z};

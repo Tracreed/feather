@@ -26,20 +26,13 @@ fn physics_test_system(plugin: &mut PhysicsTesting, game: &mut Game) {
     let mut spawned_entities: u32 = 0; 
 
     for(_entity, (pos, _vel)) in game.query::<(&Position, &Velocity)>() {
-        if plugin.tick_counter % 100 == 0 && spawned_entities != max_new_entites  {
+        if plugin.tick_counter % 1000 == 0 && spawned_entities != max_new_entites  {
 
             // Every even tick spawns mob with positive x velocity
-            if plugin.tick_counter % 2 == 0{
-                game.create_entity_builder(pos, random_mob())
-                    .with(CustomName::new("name"))
-                    .with(Velocity{x:0.5, y:0.0, z:0.0})
-                    .finish();
-            }else{
-                game.create_entity_builder(pos, random_mob())
-                    .with(CustomName::new("name"))
-                    .with(Velocity{x:0.0, y:0.0, z:0.5})
-                    .finish();
-            }
+            game.create_entity_builder(pos, random_mob())
+                .with(CustomName::new("name"))
+                .with(Velocity{x: rand::thread_rng().gen_range(0.25..0.75), y: rand::thread_rng().gen_range(0.25..0.75), z: rand::thread_rng().gen_range(0.25..0.75)})
+                .finish();
             
             spawned_entities += 1;
         }

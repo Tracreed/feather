@@ -1,7 +1,10 @@
+use std::convert::identity;
+
 use quill::{
-    components::{CustomName},
+    components::CustomName,
     EntityInit, Game, Plugin, Setup, Velocity, Position
 };
+
 use rand::Rng;
 
 quill::plugin!(PhysicsTesting);
@@ -17,25 +20,31 @@ impl Plugin for PhysicsTesting {
     }
 
     fn disable(self, _game: &mut Game) {}
-
 }
 
 fn physics_test_system(plugin: &mut PhysicsTesting, game: &mut Game) {
 
-    let max_new_entites: u32 = 10;
-    let mut spawned_entities: u32 = 0; 
+    for(entity, (pos, _vel)) in game.query::<(&Position, &Velocity)>() {
+        match entity.get::<quill::components::Name>(){
+            Ok(name)=>{
+                if plugin.tick_counter % 100 == 0 {
+                    // Every even tick spawns mob with random velocity
+                    let x = rand::thread_rng().gen_range(-0.75..0.75);
+                    let y = rand::thread_rng().gen_range(-0.75..0.75);
+                    let z = rand::thread_rng().gen_range(-0.75..0.75);
 
-    for(_entity, (pos, _vel)) in game.query::<(&Position, &Velocity)>() {
-        if plugin.tick_counter % 1000 == 0 && spawned_entities != max_new_entites  {
-
-            // Every even tick spawns mob with positive x velocity
-            game.create_entity_builder(pos, random_mob())
-                .with(CustomName::new("name"))
-                .with(Velocity{x: rand::thread_rng().gen_range(0.25..0.75), y: rand::thread_rng().gen_range(0.25..0.75), z: rand::thread_rng().gen_range(0.25..0.75)})
-                .finish();
-            
-            spawned_entities += 1;
+                    entity.send_message(format!("Spawning mob on {} with velocity : {} {} {}", name, x, y , z));
+                    game.create_entity_builder(pos, random_mob())
+                        .with(CustomName::new("name"))
+                        .with(Velocity{ x, y, z })
+                        .finish();
+                }
+            },
+            Err(_) =>{
+                return ()
+            }
         }
+        
     }
 
     plugin.tick_counter += 1;

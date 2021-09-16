@@ -1,16 +1,13 @@
 use std::convert::identity;
 
-use quill::{
-    components::CustomName,
-    EntityInit, Game, Plugin, Setup, Velocity, Position
-};
+use quill::{components::CustomName, EntityInit, Game, Plugin, Position, Setup, Velocity};
 
 use rand::Rng;
 
 quill::plugin!(PhysicsTesting);
 
 struct PhysicsTesting {
-    tick_counter : u64
+    tick_counter: u64,
 }
 
 impl Plugin for PhysicsTesting {
@@ -23,32 +20,30 @@ impl Plugin for PhysicsTesting {
 }
 
 fn physics_test_system(plugin: &mut PhysicsTesting, game: &mut Game) {
-
-    for(entity, (pos, _vel)) in game.query::<(&Position, &Velocity)>() {
-        match entity.get::<quill::components::Name>(){
-            Ok(name)=>{
+    for (entity, (pos, _vel)) in game.query::<(&Position, &Velocity)>() {
+        match entity.get::<quill::components::Name>() {
+            Ok(name) => {
                 if plugin.tick_counter % 100 == 0 {
                     // Every even tick spawns mob with random velocity
                     let x = rand::thread_rng().gen_range(-0.75..0.75);
                     let y = rand::thread_rng().gen_range(-0.75..0.75);
                     let z = rand::thread_rng().gen_range(-0.75..0.75);
 
-                    entity.send_message(format!("Spawning mob on {} with velocity : {} {} {}", name, x, y , z));
+                    entity.send_message(format!(
+                        "Spawning mob on {} with velocity : {} {} {}",
+                        name, x, y, z
+                    ));
                     game.create_entity_builder(pos, random_mob())
                         .with(CustomName::new("name"))
-                        .with(Velocity{ x, y, z })
+                        .with(Velocity { x, y, z })
                         .finish();
                 }
-            },
-            Err(_) =>{
-                return ()
             }
+            Err(_) => return (),
         }
-        
     }
 
     plugin.tick_counter += 1;
-
 }
 
 fn random_mob() -> EntityInit {

@@ -1,6 +1,7 @@
 use std::{cell::RefCell, mem, rc::Rc, sync::Arc};
 
 use base::{BlockId, BlockPosition, ChunkPosition, Position, Text, Title};
+use datapacks::{RecipeRegistry, TagRegistry};
 use ecs::{
     Ecs, Entity, EntityBuilder, HasEcs, HasResources, NoSuchEntity, Resources, SysResult,
     SystemExecutor,
@@ -9,7 +10,7 @@ use quill_common::{entities::Player, entity_init::EntityInit};
 
 use crate::{
     chat::{ChatKind, ChatMessage},
-    chunk_entities::ChunkEntities,
+    chunk::entities::ChunkEntities,
     events::{BlockChangeEvent, EntityCreateEvent, EntityRemoveEvent, PlayerJoinEvent},
     ChatBox, World,
 };
@@ -54,6 +55,10 @@ pub struct Game {
     entity_spawn_callbacks: Vec<EntitySpawnCallback>,
 
     entity_builder: EntityBuilder,
+
+    pub tag_registry: TagRegistry,
+
+    pub recipe_registry: RecipeRegistry,
 }
 
 impl Default for Game {
@@ -74,6 +79,8 @@ impl Game {
             tick_count: 0,
             entity_spawn_callbacks: Vec::new(),
             entity_builder: EntityBuilder::new(),
+            tag_registry: TagRegistry::new(),
+            recipe_registry: RecipeRegistry::new(),
         }
     }
 

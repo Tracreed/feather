@@ -7,8 +7,8 @@ use std::{
 
 use ahash::AHashSet;
 use base::{
-    BlockId, BlockPosition, Chunk, ChunkPosition, EntityKind, EntityMetadata, Gamemode, ItemStack,
-    Position, ProfileProperty, Text,
+    BlockId, BlockPosition, ChunkHandle, ChunkPosition, EntityKind, EntityMetadata, Gamemode,
+    ItemStack, Position, ProfileProperty, Text,
 };
 use common::{
     chat::{ChatKind, ChatMessage},
@@ -16,7 +16,6 @@ use common::{
 };
 use flume::{Receiver, Sender};
 use packets::server::{Particle, SetSlot, SpawnLivingEntity, UpdateLight, WindowConfirmation};
-use parking_lot::RwLock;
 use protocol::{
     packets::{
         self,
@@ -179,7 +178,7 @@ impl Client {
         self.sent_entities.borrow().contains(&network_id)
     }
 
-    pub fn send_join_game(&self, gamemode: Gamemode) {
+    pub fn send_join_game(&self, gamemode: Gamemode, game: &common::Game) {
         log::trace!("Sending Join Game to {}", self.username);
         // Use the dimension codec sent by the default vanilla server. (Data acquired via tools/proxy)
         let dimension_codec = nbt::Blob::from_reader(&mut Cursor::new(include_bytes!(
@@ -208,6 +207,8 @@ impl Client {
             is_debug: false,
             is_flat: false,
         });
+
+        self.send_packet(game.tag_registry.all_tags());
     }
 
     pub fn send_brand(&self) {
@@ -257,7 +258,7 @@ impl Client {
         });
     }
 
-    pub fn send_chunk(&self, chunk: &Arc<RwLock<Chunk>>) {
+    pub fn send_chunk(&self, chunk: &ChunkHandle) {
         self.chunk_send_queue.borrow_mut().push_back(ChunkData {
             chunk: Arc::clone(chunk),
             kind: ChunkDataKind::LoadChunk,
@@ -267,7 +268,7 @@ impl Client {
             .insert(chunk.read().position());
     }
 
-    pub fn overwrite_chunk_sections(&self, chunk: &Arc<RwLock<Chunk>>, sections: Vec<usize>) {
+    pub fn overwrite_chunk_sections(&self, chunk: &ChunkHandle, sections: Vec<usize>) {
         self.send_packet(ChunkData {
             chunk: Arc::clone(chunk),
             kind: ChunkDataKind::OverwriteChunk { sections },

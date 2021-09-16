@@ -7,7 +7,7 @@ use crate::ChunkPosition;
 
 /// The number of bits used for each block
 /// in the global palette.
-pub const GLOBAL_BITS_PER_BLOCK: u8 = 14;
+pub const GLOBAL_BITS_PER_BLOCK: u8 = 15;
 
 /// The minimum bits per block allowed when
 /// using a section palette.
@@ -126,6 +126,7 @@ impl Chunk {
     /// Sets the block at the given position within this chunk.
     ///
     /// Returns `None` if the coordinates are out of bounds.
+    /// FIXME: Do not update heightmap when it is not neccessary
     pub fn set_block_at(&mut self, x: usize, y: usize, z: usize, block: BlockId) -> Option<()> {
         let old_block = self.block_at(x, y, z)?;
         let section = self.section_for_y_mut(y)?;
@@ -253,13 +254,13 @@ impl Chunk {
     }
 
     /// Gets the chunk section at index `y`.
-    pub fn section(&self, y: usize) -> Option<&ChunkSection> {
-        self.sections.get(y)?.as_ref()
+    pub fn section(&self, y: isize) -> Option<&ChunkSection> {
+        self.sections.get((y + 1) as usize)?.as_ref()
     }
 
     /// Mutably gets the chunk section at index `y`.
-    pub fn section_mut(&mut self, y: usize) -> Option<&mut ChunkSection> {
-        self.sections.get_mut(y)?.as_mut()
+    pub fn section_mut(&mut self, y: isize) -> Option<&mut ChunkSection> {
+        self.sections.get_mut((y + 1) as usize)?.as_mut()
     }
 
     /// Sets the section at index `y`.
@@ -374,6 +375,7 @@ impl ChunkSection {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::HIGHEST_ID;
 
     #[test]
     fn chunk_new() {
@@ -417,7 +419,7 @@ mod tests {
 
         chunk.set_block_at(0, 0, 0, BlockId::andesite());
         assert_eq!(chunk.block_at(0, 0, 0).unwrap(), BlockId::andesite());
-        assert!(chunk.section(1).is_some());
+        assert!(chunk.section(0).is_some());
     }
 
     #[test]
@@ -470,7 +472,7 @@ mod tests {
                         assert_eq!(chunk.block_at(x, (section * 16) + y, z), Some(block));
                         if counter != 0 {
                             assert!(
-                                chunk.section(section + 1).is_some(),
+                                chunk.section(section as isize).is_some(),
                                 "Section {} failed",
                                 section
                             );
@@ -483,14 +485,17 @@ mod tests {
 
         // Go through again to be sure
         for section in 0..16 {
-            assert!(chunk.section(section + 1).is_some());
+            assert!(chunk.section(section).is_some());
             let mut counter = 0;
             for x in 0..16 {
                 for y in 0..16 {
                     for z in 0..16 {
                         let block = BlockId::from_vanilla_id(counter);
-                        assert_eq!(chunk.block_at(x, (section * 16) + y, z), Some(block));
-                        assert!(chunk.section(section + 1).is_some());
+                        assert_eq!(
+                            chunk.block_at(x, (section as usize * 16) + y, z),
+                            Some(block)
+                        );
+                        assert!(chunk.section(section).is_some());
                         counter += 1;
                     }
                 }
@@ -603,5 +608,11 @@ mod tests {
                 }
             }
         }
+    }
+
+    #[test]
+    fn global_bits() {
+        //The highest block state id must fit into GLOBAL_BITS_PER_BLOCK
+        assert_eq!(HIGHEST_ID >> GLOBAL_BITS_PER_BLOCK, 0)
     }
 }

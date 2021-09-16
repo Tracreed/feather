@@ -1,18 +1,16 @@
-use std::{cell::RefCell, rc::Rc};
+use std::{cell::RefCell, rc::Rc, sync::Arc};
 
 use anyhow::Context;
-use common::{
-    world_source::{flat::FlatWorldSource, region::RegionWorldSource, WorldSource},
-    Game, TickLoop, World,
-};
+use base::anvil::level::SuperflatGeneratorOptions;
+use common::{Game, TickLoop, World};
 use ecs::SystemExecutor;
-use feather_server::Server;
+use feather_server::{config::Config, Server};
 use plugin_host::PluginManager;
+use worldgen::{ComposableGenerator, SuperflatWorldGenerator, WorldGenerator};
 
 mod logging;
 
 const PLUGINS_DIRECTORY: &str = "plugins";
-const WORLD_DIRECTORY: &str = "world";
 const CONFIG_PATH: &str = "config.toml";
 
 #[tokio::main]
@@ -31,17 +29,18 @@ async fn main() -> anyhow::Result<()> {
     let options = config.to_options();
     let server = Server::bind(options).await?;
 
-    let game = init_game(server)?;
+    let game = init_game(server, &config)?;
 
     run(game);
 
     Ok(())
 }
 
-fn init_game(server: Server) -> anyhow::Result<Game> {
+fn init_game(server: Server, config: &Config) -> anyhow::Result<Game> {
     let mut game = Game::new();
+    init_registries(&mut game)?;
     init_systems(&mut game, server);
-    init_world_source(&mut game);
+    init_world_source(&mut game, config);
     init_plugin_manager(&mut game)?;
     Ok(game)
 }
@@ -60,14 +59,19 @@ fn init_systems(game: &mut Game, server: Server) {
     game.system_executor = Rc::new(RefCell::new(systems));
 }
 
-fn init_world_source(game: &mut Game) {
+fn init_world_source(game: &mut Game, config: &Config) {
     // Load chunks from the world save first,
-    // and fall back to generating a superflat
-    // world otherwise. This is a placeholder:
-    // we don't have proper world generation yet.
-    let world_source =
-        RegionWorldSource::new(WORLD_DIRECTORY).with_fallback(FlatWorldSource::new());
-    game.world = World::with_source(world_source);
+    // and fall back to generating a world otherwise.
+
+    let seed = 42; // FIXME: load from the level file
+
+    let generator: Arc<dyn WorldGenerator> = match &config.world.generator[..] {
+        "flat" => Arc::new(SuperflatWorldGenerator::new(
+            SuperflatGeneratorOptions::default(),
+        )),
+        _ => Arc::new(ComposableGenerator::default_with_seed(seed)),
+    };
+    game.world = World::with_gen_and_path(generator, config.world.name.clone());
 }
 
 fn init_plugin_manager(game: &mut Game) -> anyhow::Result<()> {
@@ -76,6 +80,18 @@ fn init_plugin_manager(game: &mut Game) -> anyhow::Result<()> {
 
     let plugin_manager_rc = Rc::new(RefCell::new(plugin_manager));
     game.insert_resource(plugin_manager_rc);
+    Ok(())
+}
+
+fn init_registries(game: &mut Game) -> anyhow::Result<()> {
+    game.tag_registry = datapacks::TagRegistryBuilder::from_dir(
+        std::path::Path::new("./feather/datapacks/minecraft/data/minecraft/tags"),
+        "minecraft",
+    )?
+    .build()?;
+    game.recipe_registry = datapacks::recipe::RecipeRegistry::from_dir(std::path::Path::new(
+        "./feather/datapacks/minecraft/data/minecraft/recipes",
+    ))?;
     Ok(())
 }
 

@@ -19,14 +19,11 @@ pub use window::Window;
 
 pub mod events;
 
-pub mod world_source;
+pub mod chunk;
+mod region_worker;
 
 pub mod world;
 pub use world::World;
-
-mod chunk_loading;
-
-mod chunk_entities;
 
 pub mod chat;
 pub use chat::ChatBox;
@@ -39,8 +36,8 @@ pub mod physics;
 /// Registers gameplay systems with the given `Game` and `SystemExecutor`.
 pub fn register(game: &mut Game, systems: &mut SystemExecutor<Game>) {
     view::register(game, systems);
-    chunk_loading::register(game, systems);
-    chunk_entities::register(systems);
+    chunk::loading::register(game, systems);
+    chunk::entities::register(systems);
     interactable::register(game);
     physics::register(systems);
 

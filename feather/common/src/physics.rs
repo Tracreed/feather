@@ -1,19 +1,41 @@
+use std::cmp::Ordering;
+
 use crate::{Game, World};
 use base::EntityKind;
 use ecs::{SysResult, SystemExecutor};
 use libcraft_core::{BlockPosition, Position, Vec3f, Vec3i, Velocity};
-use quill_common::components::Name;
-
-struct BB {
-    height: u32,
-    width: u32,
-}
+use quill_common::components::OnGround;
 
 pub struct Physics {
     gravity: f64,
     drag: f64,
-    bounding_box: BB,
+    bounding_box: vek::Aabb::<f64>,
     dba: bool, // drag before acceleration
+}
+
+#[derive(Debug, Clone, Eq, PartialEq)]
+pub enum Side {
+    NORTH,
+    SOUTH,
+    WEST,
+    EAST,
+    TOP,
+    BOTTOM,
+    NONE
+}
+
+impl std::fmt::Display for Side {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Side::NORTH => f.write_str("North"),
+            Side::SOUTH => f.write_str("South"),
+            Side::WEST => f.write_str("West"),
+            Side::EAST => f.write_str("East"),
+            Side::TOP => f.write_str("Top"),
+            Side::BOTTOM => f.write_str("Bottom"),
+            Side::NONE => f.write_str("None"),
+        }
+    }
 }
 
 impl Default for Physics {
@@ -21,9 +43,9 @@ impl Default for Physics {
         Physics {
             gravity: 0.08,
             drag: 0.02,
-            bounding_box: BB {
-                height: 1,
-                width: 1,
+            bounding_box: vek::Aabb {
+                min: vek::Vec3::zero(),
+                max: vek::Vec3 {x: 0.6 as f64, y: 1.8 as f64, z: 0.6 as f64},
             },
             dba: true,
         }
@@ -35,7 +57,19 @@ struct Ray {
     direction: Vec3f,
 }
 
-pub fn check_collision(world: &World, old_pos: &mut Position, new_pos: Position) -> Option<Vec3f> {
+/// The position at which a ray impacts a block.
+#[derive(Debug, Clone, PartialEq)]
+pub struct RayImpact {
+    /// The position of the block which was impacted.
+    pub block: BlockPosition,
+    /// The exact position, in world coordinates, at
+    /// which the ray met the block.
+    pub pos: Position,
+    /// The face(s) of the block where the ray impacted.
+    pub face: Side,
+}
+
+pub fn check_collision(world: &World, old_pos: &mut Position, new_pos: Position) -> Option<RayImpact> {
     struct Step {
         x: i32,
         y: i32,
@@ -58,175 +92,145 @@ pub fn check_collision(world: &World, old_pos: &mut Position, new_pos: Position)
     };
 
     // Used to track where we currently are along the ray.
-    let mut position = Vec3i {
-        x: (old_pos.x as f32 / 1_f32).floor() as i32,
-        y: (old_pos.y as f32 / 1_f32).floor() as i32,
-        z: (old_pos.z as f32 / 1_f32).floor() as i32,
+    let mut position = old_pos.block();
+
+    ray.direction.normalize();
+
+    let mut delta = Vec3f {
+        x: f32::INFINITY,
+        y: f32::INFINITY,
+        z: f32::INFINITY,
     };
 
-    let new_block_position = BlockPosition {
-        x: new_pos.x as i32,
-        y: new_pos.y as i32,
-        z: new_pos.z as i32,
+    let mut next = Vec3f {
+        x: f32::INFINITY,
+        y: f32::INFINITY,
+        z: f32::INFINITY,
     };
 
-    let last_voxel: Vec3f = Vec3f {
-        x: (new_pos.x as f32 / 1_f32).floor(),
-        y: (new_pos.y as f32 / 1_f32).floor(),
-        z: (new_pos.z as f32 / 1_f32).floor(),
-    };
-
-    if ray.direction.x < 0_f32 {
-        step.x = -1;
-    } else {
-        step.x = 1;
-    }
-
-    if ray.direction.y < 0_f32 {
-        step.y = -1;
-    } else {
-        step.y = 1;
-    }
-
-    if ray.direction.z < 0_f32 {
-        step.z = -1;
-    } else {
-        step.z = 1;
-    }
-
-    let delta_x = 1_f32 / ray.direction.x * step.x as f32;
-    let delta_y = 1_f32 / ray.direction.y * step.y as f32;
-    let delta_z = 1_f32 / ray.direction.z * step.z as f32;
-
-    let next_voxel_boundary_x = (position.x as f32 + step.x as f32) / ray.direction.x;
-    let next_voxel_boundary_y = (position.y as f32 + step.y as f32) / ray.direction.y;
-    let next_voxel_boundary_z = (position.z as f32 + step.z as f32) / ray.direction.z;
-
-    //let step_size = sqrtf64()
-
-    let mut tmax_x = (next_voxel_boundary_x / old_pos.x as f32) / ray.direction.x;
-    let mut tmax_y = (next_voxel_boundary_y / old_pos.x as f32) / ray.direction.y;
-    let mut tmax_z = (next_voxel_boundary_z / old_pos.x as f32) / ray.direction.z;
-
-    let mut diff: Vec3i = Vec3i {
-        x: 0,
-        y: 0,
-        z: 0,
-    };
-
-    let mut neg_ray: bool = false;
-
-    if position.x as f32 != last_voxel.x && ray.direction.x < 0_f32 {
-        diff.x -= 1;
-        neg_ray = true;
-    };
-    if position.y as f32 != last_voxel.y && ray.direction.y < 0_f32 {
-        diff.y -= 1;
-        neg_ray = true;
-    };
-    if position.z as f32 != last_voxel.z && ray.direction.z < 0_f32 {
-        diff.z -= 1;
-        neg_ray = true;
-    };
-
-    //println!("Position before if: {}", position);
-
-    if is_solid(world, position) {
-        return Some(Vec3f {
-            x: position.x as f32,
-            y: position.y as f32,
-            z: position.z as f32,
-        });
-    };
-
-    if neg_ray {
-        position += diff;
-        if is_solid(world, position) {
-            return Some(Vec3f {
-                x: position.x as f32,
-                y: position.y as f32,
-                z: position.z as f32,
-            });
-        } else {
-            return None;
+    match ray.direction.x.partial_cmp(&0.0).unwrap() {
+        Ordering::Greater => {
+            step.x = 1;
+            delta.x = 1.0 / ray.direction.x;
+            next.x = ((ray.origin.x + 1.0).floor() - ray.origin.x) / ray.direction.x; // Brings X position to next integer
         }
+        Ordering::Less => {
+            step.x = -1;
+            delta.x = (1.0 / ray.direction.x).abs();
+            next.x = ((ray.origin.x - (ray.origin.x - 1.0).ceil()) / ray.direction.x).abs();
+        }
+        _ => (),
     }
 
-    println!("x: {}, y: {}, z: {}, tmax_x: {}, tmax_y: {}, tmax_z: {}", position.x, position.y, position.z, tmax_x, tmax_y, tmax_z);
+    match ray.direction.y.partial_cmp(&0.0).unwrap() {
+        Ordering::Greater => {
+            step.y = 1;
+            delta.y = 1.0 / ray.direction.y;
+            next.y = ((ray.origin.y + 1.0).floor() - ray.origin.y) / ray.direction.y;
+        }
+        Ordering::Less => {
+            step.y = -1;
+            delta.y = (1.0 / ray.direction.y).abs();
+            next.y = ((ray.origin.y - (ray.origin.y - 1.0).ceil()) / ray.direction.y).abs();
+        }
+        _ => (),
+    }
 
-    loop {
-        if tmax_x < tmax_y {
-            if tmax_x < tmax_z {
+    match ray.direction.z.partial_cmp(&0.0).unwrap() {
+        Ordering::Greater => {
+            step.z = 1;
+            delta.z = 1.0 / ray.direction.z;
+            next.z = ((ray.origin.z + 1.0).floor() - ray.origin.z) / ray.direction.z;
+        }
+        Ordering::Less => {
+            step.z = -1;
+            delta.z = (1.0 / ray.direction.z).abs();
+            next.z = ((ray.origin.z - (ray.origin.z - 1.0).ceil()) / ray.direction.z).abs();
+        }
+        _ => (),
+    }
+
+    let mut face = Side::NONE;
+
+
+    let mut distance =  Vec3f { x: 0.0, y: 0.0, z: 0.0 };
+    let max_distance: f32 = 100.0;
+    while distance.magnitude_squared() < max_distance {
+        // impact!
+        match world.block_at(BlockPosition { x: position.x, y: position.y, z: position.z }) {
+            Some(block) => {
+                if block.is_solid() {
+                    println!("Was a block at: {}, {}, {}", position.x, position.y, position.z);
+                    println!("Face: {}", face);
+                    let pos = ray.origin + ray.direction * distance;
+                    return Some(RayImpact {
+                        block: position.into(),
+                        pos: Position {
+                            x: pos.x as f64,
+                            y: pos.y as f64,
+                            z: pos.z as f64,
+                            pitch: new_pos.pitch,
+                            yaw: new_pos.yaw,
+                        },
+                        face,
+                    });
+                }
+            }
+            None => {
+                println!("Chunk not loaded");
+                return None;
+            }
+        }
+
+        if next.x < next.y {
+            if next.x < next.z {
                 position.x += step.x;
-                /*if step.x > 0 && position.x > new_block_position.x || step.x < 0 && position.x < new_block_position.x
-                {
-                    return None;
-                }*/
-                //if (X == justOutX) return(NIL); /* outside grid */
-                tmax_x += delta_x;
+                next.x += delta.x;
+                distance.x += 1.0;
+                face = if step.x == 1 {
+                    Side::WEST
+                } else {
+                    Side::EAST
+                };
             } else {
                 position.z += step.z;
-                /*if step.z > 0 && position.z > new_block_position.z || step.z < 0 && position.z < new_block_position.z
-                {
-                    return None;
-                }*/
-                //if (Z == justOutZ) return(NIL);
-                tmax_z += delta_z;
+                next.z += delta.z;
+                distance.z += 1.0;
+                face = if step.z == 1 {
+                    Side::SOUTH
+                } else {
+                    Side::NORTH
+                };
             }
         } else {
-            if tmax_y < tmax_z {
+            if next.y < next.z {
                 position.y += step.y;
-                /*if step.y > 0 && position.y > new_block_position.y || step.y < 0 && position.y < new_block_position.y
-                {
-                    return None;
-                }*/
-                //if (Y == justOutY) return(NIL);
-                tmax_y += delta_y;
+                next.y += delta.y;
+                distance.y += 1.0;
+                face = if step.y == 1 {
+                    Side::BOTTOM
+                } else {
+                    Side::TOP
+                };
             } else {
                 position.z += step.z;
-                /*if step.z > 0 && position.z > new_block_position.z || step.z < 0 && position.z < new_block_position.z
-                {
-                    return None;
-                }*/
-                //if (Z == justOutZ) return(NIL);
-                tmax_z += delta_z;
+                next.z += delta.z;
+                distance.z += 1.0;
+                face = if step.z == 1 {
+                    Side::SOUTH
+                } else {
+                    Side::NORTH
+                }
             }
         }
-
-        // impact
-        match is_solid(world, position) {
-            true => {
-                return Some(Vec3f {
-                    x: position.x as f32,
-                    y: position.y as f32,
-                    z: position.z as f32,
-                });
-            },
-            false => return None,
-        }
     }
-}
-
-fn is_solid(world: &World, position: Vec3i) -> bool {
-    match world.block_at(BlockPosition { x: position.x, y: position.y, z: position.z }) {
-        Some(block) => {
-            if block.is_solid() {
-                println!("Was a block at: {}, {}, {}", position.x, position.y, position.z);
-                return true;
-            } else {
-                return false
-            }
-        }
-        None => {
-            println!("Chunk not loaded");
-            return false;
-        }
-    }
+    // If we didn't hit a block we just return None
+    None
 }
 
 pub fn physics_system(game: &mut Game) -> SysResult {
-    for (_entity, (pos, vel)) in game.ecs.query::<(&mut Position, &mut Velocity)>().iter() {
-        let new_pos: Position = Position {
+    for (_entity, (pos, vel, on_ground)) in game.ecs.query::<(&mut Position, &mut Velocity, &mut OnGround)>().iter() {
+        let mut new_pos: Position = Position {
             x: pos.x + vel.x,
             y: pos.y + vel.y,
             z: pos.z + vel.z,
@@ -234,14 +238,40 @@ pub fn physics_system(game: &mut Game) -> SysResult {
             yaw: pos.yaw,
         };
 
+        //let pending: Vec3f = 
+
+        //                                           acceleration/blocks    drag    term
+        //  Players and other living entities [note 1] 	0.08 	         	0.02 	3.92
+
+        let mut gravity_tick = 1.0;
+
+        if !on_ground.0 {
+            //let strength = 0.02 * gravity_tick;
+
+            let new_y = vel.y - 0.08;
+            vel.y = new_y;
+            vel.x *= 1.0 - 0.02;
+            vel.y *= 1.0 - 0.02;
+            vel.z *= 1.0 - 0.02;
+        }
+
+        println!("Entity With velocity: {:?}", vel);
+
         match check_collision(&game.world, pos, new_pos) {
-            Some(clamp_pos) => {
-                pos.x = clamp_pos.x as f64;
+            Some(impact) => {
+                /*pos.x = clamp_pos.x as f64;
                 pos.y = clamp_pos.y as f64;
-                pos.z = clamp_pos.z as f64;
+                pos.z = clamp_pos.z as f64;*/
+
+                println!("Impact!: {:?}", impact);
 
                 pos.pitch = new_pos.pitch;
                 pos.yaw = new_pos.yaw;
+
+                /*vel.x = 0.0;
+                vel.y = 0.0;
+                vel.z = 0.0;*/
+                //on_ground.0 = true;
             }
             None => {
                 // valid movement
@@ -251,6 +281,7 @@ pub fn physics_system(game: &mut Game) -> SysResult {
                 pos.z = new_pos.z;
                 pos.pitch = new_pos.pitch;
                 pos.yaw = new_pos.yaw;
+                on_ground.0 = false;
             }
         }
     }

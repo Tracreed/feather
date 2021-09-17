@@ -1,6 +1,6 @@
 use std::convert::identity;
 
-use quill::{components::CustomName, EntityInit, Game, Plugin, Position, Setup, Velocity};
+use quill::{components::CustomName, EntityInit, Game, Plugin, Position, Setup, Velocity, components::Name};
 
 use rand::Rng;
 
@@ -20,7 +20,7 @@ impl Plugin for PhysicsTesting {
 }
 
 fn physics_test_system(plugin: &mut PhysicsTesting, game: &mut Game) {
-    for (entity, (pos, _vel)) in game.query::<(&Position, &Velocity)>() {
+    for (entity, (pos, _vel)) in game.query::<(&Position, &Name)>() {
         match entity.get::<quill::components::Name>() {
             Ok(name) => {
                 if plugin.tick_counter % 100 == 0 {

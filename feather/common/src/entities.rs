@@ -13,7 +13,7 @@ use libcraft_core::Velocity;
 /// Adds default components shared between all entities.
 fn build_default(builder: &mut EntityBuilder) {
     builder.add(Uuid::new_v4()).add(OnGround(true));
-    builder.add(Velocity::default());
+    //builder.add(Velocity::default());
 }
 
 pub mod area_effect_cloud;

@@ -118,7 +118,8 @@ fn accept_new_player(game: &mut Game, server: &mut Server, client_id: ClientId) 
         .add(abilities.may_fly)
         .add(abilities.may_build)
         .add(abilities.instabreak)
-        .add(abilities.invulnerable);
+        .add(abilities.invulnerable)
+        .add(libcraft_core::EntityKind::Player);
 
     game.spawn_entity(builder);
 

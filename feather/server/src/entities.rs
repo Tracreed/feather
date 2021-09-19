@@ -4,6 +4,7 @@ use quill_common::entity_init::EntityInit;
 use uuid::Uuid;
 
 use crate::{Client, NetworkId};
+pub(crate) use common::block::PreviousPosition;
 
 /// Component that sends the spawn packet for an entity
 /// using its components.
@@ -14,12 +15,6 @@ impl SpawnPacketSender {
         (self.0)(entity, client)
     }
 }
-
-/// Stores the position of an entity on
-/// the previous tick. Used to determine
-/// when to send movement updates.
-#[derive(Copy, Clone, Debug)]
-pub struct PreviousPosition(pub Position);
 
 pub fn add_entity_components(builder: &mut EntityBuilder, init: &EntityInit) {
     if !builder.has::<NetworkId>() {

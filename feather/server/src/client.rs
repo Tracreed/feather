@@ -19,9 +19,7 @@ use common::{
 };
 use libcraft_items::InventorySlot;
 use packets::server::{Particle, SetSlot, SpawnLivingEntity, UpdateLight, WindowConfirmation};
-use protocol::packets::server::{
-    EntityPosition, EntityPositionAndRotation, HeldItemChange, PlayerAbilities,
-};
+use protocol::packets::server::{EntityPosition, EntityPositionAndRotation, EntityTeleport, HeldItemChange, PlayerAbilities, ResourcePack};
 use protocol::{
     packets::{
         self,
@@ -36,9 +34,7 @@ use protocol::{
 };
 use quill_common::components::{OnGround, PreviousGamemode};
 
-use crate::{
-    entities::PreviousPosition, initial_handler::NewPlayer, network_id_registry::NetworkId, Options,
-};
+use crate::{Options, config::{ResourcePackConfig}, entities::{PreviousOnGround, PreviousPosition}, initial_handler::NewPlayer, network_id_registry::NetworkId};
 use slab::Slab;
 
 /// Max number of chunks to send to a client per tick.
@@ -386,6 +382,7 @@ impl Client {
         position: Position,
         prev_position: PreviousPosition,
         on_ground: OnGround,
+        prev_on_ground: PreviousOnGround,
     ) {
         if self.network_id == Some(network_id) {
             // This entity is the client. Only update
@@ -399,6 +396,21 @@ impl Client {
 
         let no_change_yaw = (position.yaw - prev_position.0.yaw).abs() < 0.001;
         let no_change_pitch = (position.pitch - prev_position.0.pitch).abs() < 0.001;
+
+        // If the entity jumps we should send a teleport packet instead to keep relative movement in sync.
+        if on_ground != prev_on_ground.0 {
+            self.send_packet(EntityTeleport {
+                entity_id: network_id.0,
+                x: position.x,
+                y: position.y,
+                z: position.z,
+                yaw: position.yaw,
+                pitch: position.pitch,
+                on_ground: *on_ground,
+            });
+
+            return;
+        }
 
         if no_change_yaw && no_change_pitch {
             self.send_packet(EntityPosition {
@@ -576,6 +588,14 @@ impl Client {
             flags: bitfield,
             flying_speed: *abilities.fly_speed,
             fov_modifier: *abilities.walk_speed,
+        });
+    }
+
+    pub fn send_resource_pack(&self, resource_pack: &ResourcePackConfig) {
+        dbg!(resource_pack);
+        self.send_packet(ResourcePack {
+            url: resource_pack.url.to_owned(),
+            hash: resource_pack.hash.to_owned(),
         });
     }
 

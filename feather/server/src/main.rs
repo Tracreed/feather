@@ -29,7 +29,9 @@ async fn main() -> anyhow::Result<()> {
     let options = config.to_options();
     let server = Server::bind(options).await?;
 
-    let game = init_game(server, &config)?;
+    let mut game = init_game(server, &config)?;
+
+    game.insert_resource(config);
 
     run(game);
 

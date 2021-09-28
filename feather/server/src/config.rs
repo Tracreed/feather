@@ -42,6 +42,7 @@ pub struct Config {
     pub network: Network,
     pub server: ServerConfig,
     pub log: Log,
+    pub resource_pack: ResourcePackConfig,
     pub world: World,
     pub proxy: Proxy,
 }
@@ -96,6 +97,12 @@ pub struct ServerConfig {
 pub struct Log {
     #[serde(deserialize_with = "deserialize_log_level")]
     pub level: log::LevelFilter,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct ResourcePackConfig {
+    pub url: String,
+    pub hash: String,
 }
 
 #[derive(Debug, Deserialize)]

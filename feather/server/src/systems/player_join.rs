@@ -17,6 +17,7 @@ use quill_common::components::{
 };
 use quill_common::{components::Name, entity_init::EntityInit};
 
+use crate::config::Config;
 use crate::{ClientId, NetworkId, Server};
 
 pub fn register(systems: &mut SystemExecutor<Game>) {
@@ -94,6 +95,15 @@ fn accept_new_player(game: &mut Game, server: &mut Server, client_id: ClientId) 
     }
 
     client.send_window_items(&window);
+
+    let config = game.resources.get::<Config>();
+    let conf = config.as_deref().unwrap();
+
+    if conf.resource_pack.url != "" {
+        client.send_resource_pack(&conf.resource_pack);
+    }
+
+    drop(config);
 
     builder
         .add(client_id)
